@@ -175,51 +175,73 @@ namespace Easydata.Engine
             return Interlocked.Read(ref stats.DiskBytes);
         }
 
+
         public Dictionary<ulong, ClockValues> Read(List<ulong> sids, long start, long end)
         {
             Dictionary<ulong, ClockValues> result = new Dictionary<ulong, ClockValues>();
+            List<TSMReader> files2;
             lock (lockthis)
             {
-                foreach (TSMReader file in files)
+                files2 = new List<TSMReader>(files);
+            }
+            Task[] tasks = new Task[files2.Count];
+            for (int i = 0; i < files2.Count; i++)
+            {
+                TSMReader file = files2[i];
+                tasks[i] = Task.Run(() =>
                 {
                     Dictionary<ulong, ClockValues> points = file.Read(sids, start, end);
                     if (points != null)
                     {
                         foreach (KeyValuePair<ulong, ClockValues> item in points)
                         {
-                            if (!result.ContainsKey(item.Key))
-                                result.Add(item.Key, item.Value);
-                            else
-                                result[item.Key].AddRange(item.Value);
+                            lock (result)
+                            {
+                                if (!result.ContainsKey(item.Key))
+                                    result.Add(item.Key, item.Value);
+                                else
+                                    result[item.Key].AddRange(item.Value);
+                            }
                         }
                     }
-                }
-                return result;
+                });
             }
+            Task.WaitAll(tasks);
+            return result;
         }//TODO:每个文件的时间范围是否可以像Shard一样已知？
-
-
+        
         public Dictionary<ulong, ClockValues> Read(List<ulong> sids)
         {
-            Dictionary<ulong, ClockValues> result = new Dictionary<ulong, ClockValues>();
+            List<TSMReader> files2;
             lock (lockthis)
             {
-                foreach (TSMReader file in files)
+                files2 = new List<TSMReader>(files);
+            }
+            Dictionary<ulong, ClockValues> result = new Dictionary<ulong, ClockValues>();
+            Task[] tasks = new Task[files2.Count];
+            for (int i = 0; i < files2.Count; i++)
+            {
+                TSMReader file = files2[i];
+                tasks[i] = Task.Run(() =>
                 {
                     Dictionary<ulong, ClockValues> points = file.Read(sids);
                     if (points != null)
                     {
                         foreach (KeyValuePair<ulong, ClockValues> item in points)
                         {
-                            if (!result.ContainsKey(item.Key))
-                                result.Add(item.Key, item.Value);
-                            else
-                                result[item.Key].AddRange(item.Value);
+                            lock (result)
+                            {
+                                if (!result.ContainsKey(item.Key))
+                                    result.Add(item.Key, item.Value);
+                                else
+                                    result[item.Key].AddRange(item.Value);
+                            }
                         }
                     }
-                }
-                return result;
+                });
             }
+            Task.WaitAll(tasks);
+            return result;
         }
 
         // Stats returns the stats of the underlying files, preferring the cached version if it is still valid.

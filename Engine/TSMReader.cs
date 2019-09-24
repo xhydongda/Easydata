@@ -169,7 +169,15 @@ namespace Easydata.Engine
                                 continue;
                             }
                             //TODO: Validate checksum
-                            ClockValues temp = readBlock(block, start, end);
+                            ClockValues temp;
+                            if (block.MinTime >= start && block.MaxTime <= end)
+                            {
+                                temp = readBlock(block);
+                            }
+                            else
+                            {
+                                temp = readBlock(block, start, end);
+                            }
                             if (hasTombstone)
                             {
                                 foreach (TimeRange t in tombstones)

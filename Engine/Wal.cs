@@ -54,7 +54,7 @@ namespace Easydata.Engine
         //仅在构造函数中初始化.        
         public string Path { get; private set; }
 
-        long traceLogging = 1;
+        long traceLogging = 0;
         public bool EnableTraceLogging
         {
             get

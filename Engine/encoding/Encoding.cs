@@ -192,8 +192,8 @@ namespace Easydata.Engine
             }
             IClockValue value0 = values[0];
             byte datatype = value0.DataType;
-            long[] ts = ArrayPool<long>.Shared.Rent(count);
-            Span<long> ts_span = new Span<long>(ts, 0, count);
+            ulong[] ts = ArrayPool<ulong>.Shared.Rent(count);
+            Span<ulong> ts_span = new Span<ulong>(ts, 0, count);
             long[] qs = ArrayPool<long>.Shared.Rent(count);
             Span<long> qs_span = new Span<long>(qs, 0, count);
 
@@ -207,7 +207,7 @@ namespace Easydata.Engine
                 for (int i = startIndex; i < startIndex + count; i++, j++)
                 {
                     ClockDouble value = (ClockDouble)values[i];
-                    ts_span[j] = value.Clock;
+                    ts_span[j] = (ulong)value.Clock;
                     vs_span[j] = value.Value;
                     qs_span[j] = value.Quality;
                 }
@@ -224,7 +224,7 @@ namespace Easydata.Engine
                 for (int i = startIndex; i < startIndex + count; i++, j++)
                 {
                     ClockBoolean value = (ClockBoolean)values[i];
-                    ts_span[j] = value.Clock;
+                    ts_span[j] = (ulong)value.Clock;
                     vs_span[j] = value.Value;
                     qs_span[j] = value.Quality;
                 }
@@ -241,7 +241,7 @@ namespace Easydata.Engine
                 for (int i = startIndex; i < startIndex + count; i++, j++)
                 {
                     ClockInt64 value = (ClockInt64)values[i];
-                    ts_span[j] = value.Clock;
+                    ts_span[j] = (ulong)value.Clock;
                     vs_span[j] = value.Value;
                     qs_span[j] = value.Quality;
                 }
@@ -258,7 +258,7 @@ namespace Easydata.Engine
                 for (int i = startIndex; i < startIndex + count; i++, j++)
                 {
                     ClockString value = (ClockString)values[i];
-                    ts_span[j] = value.Clock;
+                    ts_span[j] = (ulong)value.Clock;
                     vs_span[j] = value.Value;
                     qs_span[j] = value.Quality;
                 }
@@ -282,7 +282,7 @@ namespace Easydata.Engine
                     good = (qswriter != null && qserror == null);
                 }
             }
-            ArrayPool<long>.Shared.Return(ts);
+            ArrayPool<ulong>.Shared.Return(ts);
             ArrayPool<long>.Shared.Return(qs);
             if (good)
             {
@@ -460,14 +460,14 @@ namespace Easydata.Engine
             //解析时标段;
             int nn = Varint.Read(span, out int tsLen);
             Span<byte> ts_src_span = span.Slice(nn, tsLen);
-            long[] ts = ArrayPool<long>.Shared.Rent(Constants.DefaultMaxPointsPerBlock);
-            Span<long> ts_to_span = new Span<long>(ts, 0, Constants.DefaultMaxPointsPerBlock);
+            ulong[] ts = ArrayPool<ulong>.Shared.Rent(Constants.DefaultMaxPointsPerBlock);
+            Span<ulong> ts_to_span = new Span<ulong>(ts, 0, Constants.DefaultMaxPointsPerBlock);
             BatchTimeStamp tdec = (BatchTimeStamp)CoderFactory.Get(DataTypeEnum.DateTime);
             (int tscount, string tserror) = tdec.DecodeAll(ts_src_span, ts_to_span);
             CoderFactory.Put(DataTypeEnum.DateTime, tdec);
             if (tscount == 0 || tserror != null)
             {
-                ArrayPool<long>.Shared.Return(ts);
+                ArrayPool<ulong>.Shared.Return(ts);
                 return null;
             }
             span = span.Slice(nn + tsLen);
@@ -502,7 +502,7 @@ namespace Easydata.Engine
                     result = new ClockValues(tscount);
                     for (int i = 0; i < tscount; i++)
                     {
-                        result.Append(new ClockDouble(ts_to_span[i], vs_to_span[i], (int)qs_to_span[i]));
+                        result.Append(new ClockDouble((long)ts_to_span[i], vs_to_span[i], (int)qs_to_span[i]));
                     }
                 }
                 ArrayPool<double>.Shared.Return(vs);
@@ -519,7 +519,7 @@ namespace Easydata.Engine
                     result = new ClockValues(tscount);
                     for (int i = 0; i < tscount; i++)
                     {
-                        result.Append(new ClockBoolean(ts_to_span[i], vs_to_span[i], (int)qs_to_span[i]));
+                        result.Append(new ClockBoolean((long)ts_to_span[i], vs_to_span[i], (int)qs_to_span[i]));
                     }
                 }
                 ArrayPool<bool>.Shared.Return(vs);
@@ -536,7 +536,7 @@ namespace Easydata.Engine
                     result = new ClockValues(tscount);
                     for (int i = 0; i < tscount; i++)
                     {
-                        result.Append(new ClockInt64(ts_to_span[i], vs_to_span[i], (int)qs_to_span[i]));
+                        result.Append(new ClockInt64((long)ts_to_span[i], vs_to_span[i], (int)qs_to_span[i]));
                     }
                 }
                 ArrayPool<long>.Shared.Return(vs);
@@ -553,7 +553,7 @@ namespace Easydata.Engine
                     result = new ClockValues(tscount);
                     for (int i = 0; i < tscount; i++)
                     {
-                        result.Append(new ClockString(ts_to_span[i], vs_to_span[i], (int)qs_to_span[i]));
+                        result.Append(new ClockString((long)ts_to_span[i], vs_to_span[i], (int)qs_to_span[i]));
                     }
                 }
                 ArrayPool<string>.Shared.Return(vs);
@@ -568,26 +568,25 @@ namespace Easydata.Engine
             span = span.Slice(1);
             //解析时标段;
             int nn = Varint.Read(span, out int tsLen);
-            span = span.Slice(nn);
-            Span<byte> ts_src_span = span.Slice(0, tsLen);
-            long[] ts = ArrayPool<long>.Shared.Rent(Constants.DefaultMaxPointsPerBlock);
-            Span<long> ts_to_span = new Span<long>(ts, 0, Constants.DefaultMaxPointsPerBlock);
+            Span<byte> ts_src_span = span.Slice(nn, tsLen);
+            ulong[] ts = ArrayPool<ulong>.Shared.Rent(Constants.DefaultMaxPointsPerBlock);
+            Span<ulong> ts_to_span = new Span<ulong>(ts, 0, Constants.DefaultMaxPointsPerBlock);
             BatchTimeStamp tdec = (BatchTimeStamp)CoderFactory.Get(DataTypeEnum.DateTime);
             (int tscount, string tserror) = tdec.DecodeAll(ts_src_span, ts_to_span);
             CoderFactory.Put(DataTypeEnum.DateTime, tdec);
             if (tscount == 0 || tserror != null)
             {
-                ArrayPool<long>.Shared.Return(ts);
+                ArrayPool<ulong>.Shared.Return(ts);
                 return null;
             }
-            span = span.Slice(tsLen);
+            span = span.Slice(nn + tsLen);
             //读取数值段.
             nn = Varint.Read(span, out int vsLen);
-            Span<byte> vs_src_span = span.Slice(0, vsLen);
-            span = span.Slice(vsLen);
+            Span<byte> vs_src_span = span.Slice(nn, vsLen);
+            span = span.Slice(nn + vsLen);
             //解析质量段.
             nn = Varint.Read(span, out int qsLen);
-            Span<byte> qs_src_span = span.Slice(0, qsLen);
+            Span<byte> qs_src_span = span.Slice(nn, qsLen);
             BatchInt64 qdec = (BatchInt64)CoderFactory.Get(DataTypeEnum.Integer);
             long[] qs = ArrayPool<long>.Shared.Rent(tscount);
             Span<long> qs_to_span = new Span<long>(qs, 0, tscount);
@@ -603,16 +602,16 @@ namespace Easydata.Engine
             if (datatype == DataTypeEnum.Double)
             {
                 BatchDouble decoder = (BatchDouble)CoderFactory.Get(datatype);
-                double[] vs = ArrayPool<double>.Shared.Rent(tscount);
-                Span<double> vs_to_span = new Span<double>(vs, 0, tscount);
+                double[] vs = ArrayPool<double>.Shared.Rent(tscount + 1);
+                Span<double> vs_to_span = new Span<double>(vs, 0, tscount + 1);
                 (int vscount, string vserror) = decoder.DecodeAll(vs_src_span, vs_to_span);
                 CoderFactory.Put(datatype, decoder);
-                if (vscount == tscount && vserror == null)
+                if (vscount >= tscount && vserror == null)
                 {
                     result = new ClockValues(tscount);
                     for (int i = 0; i < tscount; i++)
                     {
-                        long clock = ts_to_span[i];
+                        long clock = (long)ts_to_span[i];
                         if (clock > end)
                         {
                             break;
@@ -637,7 +636,7 @@ namespace Easydata.Engine
                     result = new ClockValues(tscount);
                     for (int i = 0; i < tscount; i++)
                     {
-                        long clock = ts_to_span[i];
+                        long clock = (long)ts_to_span[i];
                         if (clock > end)
                         {
                             break;
@@ -662,7 +661,7 @@ namespace Easydata.Engine
                     result = new ClockValues(tscount);
                     for (int i = 0; i < tscount; i++)
                     {
-                        long clock = ts_to_span[i];
+                        long clock = (long)ts_to_span[i];
                         if (clock > end)
                         {
                             break;
@@ -687,7 +686,7 @@ namespace Easydata.Engine
                     result = new ClockValues(tscount);
                     for (int i = 0; i < tscount; i++)
                     {
-                        long clock = ts_to_span[i];
+                        long clock = (long)ts_to_span[i];
                         if (clock > end)
                         {
                             break;

@@ -1385,7 +1385,7 @@ namespace Easydata.Engine
                 int end = start + chunkSize;
                 if (end > n)
                     end = n;
-                //Task.Run(() =>
+                Task.Run(() =>
                 {
                     for (int k = start; k < end; k++)
                     {
@@ -1421,7 +1421,7 @@ namespace Easydata.Engine
                         // Notify this key is fully encoded
                         ready[k].Set();
                     }
-                }//);//encodeRange
+                });//encodeRange
                 Interlocked.Add(ref idx, chunkSize);
             }
         }

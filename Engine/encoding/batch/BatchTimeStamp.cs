@@ -4,7 +4,7 @@ using System.Buffers;
 
 namespace Easydata.Engine
 {
-    public class BatchTimeStamp : IBatchCoder<long>
+    public class BatchTimeStamp : IBatchCoder<ulong>
     {
         // timeUncompressed is a an uncompressed format using 8 bytes per timestamp
         public const byte timeUncompressed = 0;
@@ -12,7 +12,7 @@ namespace Easydata.Engine
         public const byte timeCompressedPackedSimple = 1;
         // timeCompressedRLE is a run-length encoding format
         public const byte timeCompressedRLE = 2;
-        public (ByteWriter, string) EncodingAll(Span<long> src)
+        public (ByteWriter, string) EncodingAll(Span<ulong> src)
         {
             int srclen = src.Length;
             if (srclen == 0)
@@ -22,56 +22,60 @@ namespace Easydata.Engine
             ulong max = 0, div = (ulong)1e12;
             ulong[] deltaarray = ArrayPool<ulong>.Shared.Rent(srclen);
             Span<ulong> deltas = new Span<ulong>(deltaarray);
-            deltas[0] = (ulong)src[0];
-            for (int i = srclen - 1; i > 0; i--)
-            {
-                deltas[i] = (ulong)src[i] - (ulong)src[i - 1];
-                if (deltas[i] > max)
-                {
-                    max = deltas[i];
-                }
-            }
-            bool rle = true;
-            for (int i = 2; i < srclen; i++)
-            {
-                if (deltas[1] != deltas[i])
-                {
-                    rle = false;
-                    break;
-                }
-            }
+            deltas[0] = src[0];
             ByteWriter result;
-            // Deltas are the same - encode with RLE
-            if (rle)
+            if (srclen > 1)
             {
-                // Large varints can take up to 10 bytes.  We're storing 3 + 1
-                // type byte.
-                result = new ByteWriter(31);
-                // 4 high bits used for the encoding type
-                result.Write((byte)(timeCompressedRLE << 4));
-                // The first value
-                result.Write(deltas[0]);
-                // The first delta, checking the divisor
-                // given all deltas are the same, we can do a single check for the divisor
-                ulong v = deltas[1];
-                while (div > 1 && v % div != 0)
+                for (int i = srclen - 1; i > 0; i--)
                 {
-                    div /= 10;
+                    deltas[i] = src[i] - src[i - 1];
+                    if (deltas[i] > max)
+                    {
+                        max = deltas[i];
+                    }
                 }
-                if (div > 1)
+                bool rle = true;
+                var delta1 = deltas[1];
+                for (int i = 2; i < srclen; i++)
                 {
-                    // 4 low bits are the log10 divisor
-                    result.EndWrite()[0] |= (byte)Math.Log10(div);
-                    result.Write(Varint.GetBytes(deltas[1] / div));
+                    if (delta1 != deltas[i])
+                    {
+                        rle = false;
+                        break;
+                    }
                 }
-                else
+                // Deltas are the same - encode with RLE
+                if (rle)
                 {
-                    result.Write(Varint.GetBytes(deltas[1]));
+                    // Large varints can take up to 10 bytes.  We're storing 3 + 1
+                    // type byte.
+                    result = new ByteWriter(31);
+                    // 4 high bits used for the encoding type
+                    result.Write((byte)(timeCompressedRLE << 4));
+                    // The first value
+                    result.Write(deltas[0]);
+                    // The first delta, checking the divisor
+                    // given all deltas are the same, we can do a single check for the divisor
+                    ulong v = deltas[1];
+                    while (div > 1 && v % div != 0)
+                    {
+                        div /= 10;
+                    }
+                    if (div > 1)
+                    {
+                        // 4 low bits are the log10 divisor
+                        result.EndWrite()[0] |= (byte)Math.Log10(div);
+                        result.Write(Varint.GetBytes(deltas[1] / div));
+                    }
+                    else
+                    {
+                        result.Write(Varint.GetBytes(deltas[1]));
+                    }
+                    // The number of times the delta is repeated
+                    result.Write(Varint.GetBytes(srclen));
+                    ArrayPool<ulong>.Shared.Return(deltaarray);
+                    return (result, null);
                 }
-                // The number of times the delta is repeated
-                result.Write(Varint.GetBytes(srclen));
-                ArrayPool<ulong>.Shared.Return(deltaarray);
-                return (result, null);
             }
             // We can't compress this time-range, the deltas exceed 1 << 60
             if (max > Simple8bEncoder.MaxValue)
@@ -118,11 +122,11 @@ namespace Easydata.Engine
             }
             return (result, null);
         }
-        public (int, string) DecodeAll(Span<byte> b, Span<long> dst)
+        public (int, string) DecodeAll(Span<byte> b, Span<ulong> dst)
         {
             if (b.Length == 0) return (0, null);
             byte encoding = (byte)(b[0] >> 4);
-            long div = b[0] & 0xF;
+            ulong div = (ulong)Math.Pow(10, b[0] & 0xF);
             b = b.Slice(1);
             if (encoding == timeUncompressed)
             {
@@ -135,7 +139,7 @@ namespace Easydata.Engine
                 for (int i = 0; i < count; i++)
                 {
                     prev += BitConverter.ToUInt64(b);
-                    dst[i] = (long)prev;
+                    dst[i] = prev;
                     b = b.Slice(8);
                 }
                 return (count, null);
@@ -155,7 +159,7 @@ namespace Easydata.Engine
                 ulong[] bufarray = ArrayPool<ulong>.Shared.Rent(count);
                 Span<ulong> buf = new Span<ulong>(bufarray, 0, count);
                 //first value
-                dst[0] = BitConverter.ToInt64(b);
+                dst[0] = BitConverter.ToUInt64(b);
                 var nerr = Simple8bDecoder.DecodeAll(buf.Slice(1), b.Slice(8));
                 if (nerr.error != null)
                 {
@@ -173,7 +177,7 @@ namespace Easydata.Engine
                 {
                     for (int i = 1; i < count; i++)
                     {
-                        var dgap = (long)buf[i] * div;
+                        var dgap = buf[i] * div;
                         dst[i] = last + dgap;
                         last = dst[i];
                     }
@@ -182,7 +186,7 @@ namespace Easydata.Engine
                 {
                     for (int i = 1; i < count; i++)
                     {
-                        dst[i] = (long)buf[i] + last;
+                        dst[i] = buf[i] + last;
                         last = dst[i];
                     }
                 }
@@ -207,7 +211,7 @@ namespace Easydata.Engine
                 }
                 b = b.Slice(n);
                 // Scale the delta back up
-                delta *= (ulong)mod;
+                delta *= mod;
                 // Last 1-10 bytes is how many times the value repeats
                 n = Varint.Read(b, out int count);
                 if (n <= 0)
@@ -218,7 +222,7 @@ namespace Easydata.Engine
                 var acc = first;
                 for (int i = 0; i < count; i++)
                 {
-                    dst[i] = (long)acc;
+                    dst[i] = acc;
                     acc += delta;
                 }
                 return (count, null);
