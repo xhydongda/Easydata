@@ -4,8 +4,8 @@ A tailored version of influxdb engine with data structure fixed as {sid, timesta
 ## How to use
 Using vs2019 v16.3 to open the .sln file, debug/release DataSim, manually copy SnappyDL.x64.dll to output directory, then run DataSim.exe.
 
-First input number of points per batch and Enter, 50000 is default;
-Then input the interval to generate random data an write, and Enter, 1000 ms is default;
+First input number of points per batch and Enter, 50,000 is default;
+Then input the interval to generate random data an write, and Enter, 1,000 ms is default;
 Enter.
 
 ## Performance
