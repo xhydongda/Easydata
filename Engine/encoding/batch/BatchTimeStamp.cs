@@ -174,7 +174,7 @@ namespace Easydata.Engine
                     for (int i = 1; i < count; i++)
                     {
                         var dgap = (long)buf[i] * div;
-                        dst[i] += last + dgap;
+                        dst[i] = last + dgap;
                         last = dst[i];
                     }
                 }
