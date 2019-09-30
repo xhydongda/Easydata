@@ -1,5 +1,7 @@
 # Easydata
-A tailored version of influxdb engine with data structure fixed as {sid, timestamp, value, qualify} commonly used in IOT, based on .net core3.0.
+A tailored version of [influxdb](https://github.com/influxdata/influxdb) engine with data structure fixed as {sid, timestamp, value, qualify} commonly used in IOT, based on .net core3.0. 
+## Publicans
+[基于influxDB的工业时序数据库引擎设计](https://github.com/xhydongda/Easydata/doc/基于influxDB的工业时序数据库引擎设计.pdf).
 
 ## How to use
 Using vs2019 v16.3 to open the .sln file, debug/release DataSim, manually copy SnappyDL.x64.dll to output directory, then run DataSim.exe.
