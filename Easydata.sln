@@ -7,6 +7,17 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Engine", "Engine\Engine.csp
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DataSim", "DataSim\DataSim.csproj", "{0040AF1C-4856-4995-9C25-FBB339128C17}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "dll", "dll", "{46D6E163-388E-4A1E-BA6C-5AEC4DDB27B8}"
+	ProjectSection(SolutionItems) = preProject
+		dll1\SnappyDL.x64.dll = dll1\SnappyDL.x64.dll
+		dll1\SnappyPI.dll = dll1\SnappyPI.dll
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{FA15FFD1-1AB9-41FE-8347-70040B05C920}"
+	ProjectSection(SolutionItems) = preProject
+		doc1\基于influxDB的工业时序数据库引擎设计.pdf = doc1\基于influxDB的工业时序数据库引擎设计.pdf
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
